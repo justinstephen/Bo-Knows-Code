@@ -1,6 +1,8 @@
 library("XML")
 library("plyr")
 
+
+#Pull all data from ESPN and clean up
 boknows <- htmlParse("http://games.espn.go.com/ffl/schedule?leagueId=45342")
 boknows.table <- readHTMLTable(boknows,stringAsFactors = FALSE)
 fullschedule <- boknows.table[2]
@@ -91,10 +93,10 @@ playoff.teams.total <- character()
 ###################################################
 ###                 BEGIN LOOP                 ####
 ###################################################
-###Inside the loop you need to re-initialize the "scoreboard" dataframe so that the existing scores are re-input 
-###and the NA's reassigned to be re-evaluated. Get rid of this whole dummy section
+
 games = 0
-while (games < 10000) {
+
+while (games < 100000) {
   games = games + 1
   scoreboard <- schedule
   
@@ -133,10 +135,8 @@ while (games < 10000) {
   }
   standings <- merge(x = standings, y = total.points, by = "team", all.x=TRUE)
   
-  #Remove all NAs 
+  #Clean up the standings tables
   standings[is.na(standings)] <- 0
-  
-  #This will be in the final version
   standings<- standings[with(standings, order(wins, points, decreasing=TRUE)),]
   
   #This will determine the two division winners
@@ -151,13 +151,12 @@ while (games < 10000) {
   #List of playoff teams
   playoff.teams <- c(div1.winner, div2.winner, wc1, wc2)
   playoff.teams.total <- append(playoff.teams.total, playoff.teams)
-  
-  #Count how many times each team makes the playoffs. This can be modified later to include percentages
-  table(playoff.teams.total)
 }
 ###################################################
 ###                  END LOOP                  ####
 ###################################################
+
+#Puts data into a data.frame and formats
 po.freq <- as.data.frame(table(playoff.teams.total))
 colnames(po.freq) <- c("team", "count")
 po.freq <- po.freq[with(po.freq, order(po.freq$count, decreasing = TRUE)),]
