@@ -7,7 +7,7 @@ fullschedule <- boknows.table[2]
 bo.df <- ldply(fullschedule, data.frame)
 colnames(bo.df) <- c("NULL","AWAY_TEAM", "OWNER", "AT", "HOME_TEAM", "OWNER", "RESULT")
 
-week1 <- bo.df[ 2:6,c(2, 5, 7)]
+week1 <- bo.df[ 2:7,c(2, 5, 7)]
 week2 <- bo.df[ 11:16,c(2, 5, 7)]
 week3 <- bo.df[ 20:25,c(2, 5, 7)]
 week4 <- bo.df[ 29:34,c(2, 5, 7)]
