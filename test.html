@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+
+ <script type="text/javascript">
+var spreadsheetId = "1Aoz_GcPYoEIMMNd1N_meYNOp8TJ0fCXpp1AoUhCpwZo",
+url = "https://docs.google.com/spreadsheets/d/18ha8LKIP1GM_m9drhEVTVlS7-8iK62X6xlIzD092MiU/pub?gid=937535840&single=true&output=csv";
+
+$.get({
+  url: url,
+  success: function(response) {
+    console.log(response);
+  }
+});
+</script>
+</html>
