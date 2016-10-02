@@ -1,0 +1,184 @@
+﻿<style type="text/css">
+	#dude table {
+		color:#333;
+		margin:0 auto;
+		font-family:arial,sans-serif;
+		font-size:20px;
+		width:100%;
+		max-width:1000px;
+		border-collapse: collapse;
+		border: 1px black solid;
+		letter-spacing: 1px;
+	}
+	#dude small {font-size:16px;}
+	#dude table thead {			
+		background-color:rgb(109, 187, 117);
+	}
+	#dude table tbody tr:nth-child(odd) {
+		background-color:#f1f1f1;
+	}
+	#dude table td {
+		border: none;
+		padding:5px;
+	}
+	#dude table td:first-child, #dude table td:last-child {
+		font-size: 28px;
+		width:20%;
+		text-align:center;
+
+	}
+	.this-team {margin-bottom:10px;}
+	#dude table td:nth-child(2) {
+		vertical-align: top;
+		padding-bottom:15px;
+	}
+	#dude div {display:inline-block;}
+	.logo {
+		margin:5px 10px -15px 10px;
+		width: 70px;
+		height: 70px;
+		border-radius: 70px;
+		-webkit-border-radius: 70px;
+		-moz-border-radius: 70px;
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+	}
+	td .block:last-child{margin-top:-5px;color:grey;}		
+	.phsh {
+		background-image: url(http://itsjimbower.com/images/shenanihads-logo.jpg);
+	}
+	.atom {
+		background-image:url(http://i.imgur.com/HM0bp6uh.png);
+	}
+	.afb {
+		background-image:url(https://lh4.googleusercontent.com/-FndxDOhOht8/V9TLck1baHI/AAAAAAAAFfM/cPhFHEBJon0pvW7rbVaITy-YorP1XQHAgCL0B/w1117-h811-no/BOOMERS.png);
+	}
+	.dmps {
+		background-image:url(http://i.imgur.com/MBsVmsB.png?1?2448);
+	}
+	.robo {
+		background-image:url(http://i.imgur.com/ziwt750.jpg);
+	}
+	.mcho {
+		background-image:url(http://i.imgur.com/LDz1Btl.jpg);
+	}
+	.butt {
+		background-image:url(http://i.imgur.com/jHoz1EO.png);
+	}
+	.song {
+		background-image:url(http://i.imgur.com/uhR9z7Nt.png);
+	}
+	.tgif {
+		background-image:url(http://static.dnaindia.com/sites/default/files/2015/05/21/338499-paul-walker.jpg);
+	}
+	.fluf {
+		background-image:url(http://s21.postimg.org/6s93v7khj/fluffybunnies.png);
+	}
+	.shsr {
+		background-image:url(http://i.imgur.com/OQxsVMT.png);
+	}
+	.octo {
+		background-image:url(http://www.kqed.org/assets/img/arts/blog/it-came.jpg);
+	}
+	.block{display:block !important;}
+	.arrow-down, .arrow-up {
+		width: 0; 
+	  height: 0; 
+	  border-left: 8px solid transparent;
+	  border-right: 8px solid transparent;
+	  margin-right:6px;
+	  margin-bottom:3px;
+	}
+	.arrow-down {
+	  border-top: 8px solid #f00;
+	}
+	.arrow-up {
+	  border-bottom: 8px solid green;
+	}
+</style>
+
+
+<div id="dude"></div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
+<script src="http://itsjimbower.com/boknows/d3.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+
+	var logos = '<div class="logo"></div>';
+
+
+	d3.text("http://itsjimbower.com/boknows/scrapethis.csv", function(data) {
+
+		var rows = d3.csvParseRows(data);
+
+		var rankings = d3.select("#dude")
+			.append("table");
+		rankings.append("thead")
+			.append("tr")
+			.selectAll("th")
+				.data(rows[0])
+				.enter().append("th")
+				.text(function(d) { return d; });
+
+		rankings.append("tbody")
+			.selectAll("tr")
+				.data(rows.slice(1))
+				.enter().append("tr")
+			.selectAll("td")
+			.data(function(d){return d;})
+			.enter().append("td")
+			.text(function(d){return d;});
+
+		$('#dude table td:nth-child(2)').each(function(){
+			var wut = $(this).html();
+			var getName = ({
+				"song" : "Columbia Songbirds",
+				"atom" : "Springfield Atoms",
+				"tgif" : "Team GoInsanelyFast",
+				"afb" : "Nellis A.F.B. Boomers",
+				"dmps" : "Dreadmetal Pumaskulls",
+				"phsh" : "Philadelphia Shenanihads",
+				"fluf" : "The Fluffy Bunnies",
+				"robo" : "Robot Unicorn",
+				"shsr" : "Shelbyville Shittysauruses",
+				"mcho" : "Randy Savage Macho Men",
+				"octo" : "Giant Octopus",
+				"butt" : "Butthole Surfers"
+			})[wut];
+
+			$(this).closest('td').empty().append('<div class="this-team"></div>');
+			$(this).closest('td').find('.this-team').html('<div class="block">'+getName+'</div>');
+			$(this).prepend(logos);
+			$(this).find('.logo').addClass(wut);
+
+		});
+		for (i = 0; i < 12; i++) {
+			var records = $('#dude table tbody tr:eq('+i+') td:eq(2)').text();
+			$('#dude table tbody tr:eq('+i+') td:eq(1) .this-team').append('<div class="block"><small>('+records+')</small></div>');
+			$('#dude table tbody tr:eq('+i+') td:eq(2)').remove();
+			
+		};
+		$('#dude table thead tr:eq(0) th:eq(2)').remove();
+
+		$('#dude table td:last-child').each(function(){
+			if ($(this).html() < 0) {
+				var val = $(this).html();
+				$(this).html(val.substring(1, val.length))
+					.css('color','red')
+					.prepend('<div class="arrow-down"></div>');
+
+			} else if ($(this).html() > 0) {
+				var val = $(this).html();
+				$(this).css('color','green')
+					.prepend('<div class="arrow-up"></div>');
+
+			} else {
+				$(this).append('--')
+				var val = $(this).html();
+				$(this).html(val.substring(1, val.length))
+			};
+		});
+	});
+</script>
