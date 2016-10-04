@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Stats"
 output: github_document
 ---
 
@@ -63,3 +63,18 @@ ggplot(all.scores, aes(x = Week, y = Score)) +
   geom_smooth(span = 0.5) +
   facet_grid(~Team)
 ```
+
+Cluster based on current season's scores:
+
+```{r clusters, echo=FALSE, fig.width=10}
+current.scores <- data.frame(read.csv("curstats.csv", quote = "", header = TRUE, stringsAsFactors=FALSE))
+
+scoreCluster <- kmeans(current.scores[,2:4], 5, nstart = 1000)
+
+df <- data.frame(current.scores, scoreCluster$cluster)
+
+ggplot(df, aes(x = wins, y = Adj.Score, label = team)) +
+  geom_label(aes(fill = as.factor(scoreCluster.cluster)), colour = "white", fontface = "bold") +
+  theme(legend.position="none")
+```
+
