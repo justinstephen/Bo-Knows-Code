@@ -18,3 +18,10 @@ records <- merged.scores %>%
   summarize(Record = paste(sum(Win.x), "-", n()-sum(Win.x))) 
 
 record.matrix <- acast(records, Team~Opponent, value.var="Record")
+
+total.record <- merged.scores %>%
+                  group_by(Team) %>%
+                  summarize(Record = paste(sum(Win.x), "-", n()-sum(Win.x)),
+                            Win.Per = paste(formatC(sum(Win.x)/n() * 100), "%"),
+                            Avg.Points.For = formatC(mean(Score.x)),
+                            Avg.Points.Against = formatC(mean(Score.y)))
