@@ -29,3 +29,16 @@ total.record <- merged.scores %>%
             Win.Per = paste(formatC(sum(Win.x)/n() * 100), "%"),
             Avg.Points.For = formatC(mean(Score.x)),
             Avg.Points.Against = formatC(mean(Score.y)))
+
+
+##Power Rankings for 2016 Season
+ranks <- as.data.frame(read.csv("boranks/data/pwrranking.csv", header = TRUE))
+
+ggplot(ranks, aes(y = Rank, x = Week, color = as.factor(Team))) + 
+  geom_line() +
+  scale_y_reverse(lim=c(12,1), breaks = 1:12) +
+  scale_x_continuous(breaks = 1:max(ranks$Week))
+
+plot_ly(ranks, x = ~Week, y = ~Rank, color = ~Team) %>%
+  add_lines() %>%
+  layout(yaxis = list(autorange = "reversed"))
