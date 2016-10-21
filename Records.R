@@ -1,6 +1,8 @@
 library(googlesheets)
 library(reshape2)
 library(dplyr)
+library(ggplot2)
+library(gridExtra)
 
 sheet <- gs_key("18ha8LKIP1GM_m9drhEVTVlS7-8iK62X6xlIzD092MiU")
 scores <- as.data.frame(sheet %>% gs_read(ws = "Scores"))
@@ -30,6 +32,21 @@ total.record <- merged.scores %>%
             Avg.Points.For = formatC(mean(Score.x)),
             Avg.Points.Against = formatC(mean(Score.y)))
 
+margin.wins <- merged.scores[merged.scores$Win.x == 1,] %>%
+  group_by(Team, Season) %>%
+  summarize(Margin = mean(abs(Score.x - Score.y))) %>%
+  arrange(Margin)
+
+margin.losses <- merged.scores[merged.scores$Win.x == 0,] %>%
+  group_by(Team, Season) %>%
+  summarize(Margin = mean(abs(Score.x - Score.y))) %>%
+  arrange(Margin)
+
+win.margin.plot <- ggplot(margin.wins[margin.wins$Season == 2016,], aes(x = reorder(Team, Margin), y = Margin)) + 
+  geom_bar(stat="identity")
+
+loss.margin.plot <- ggplot(margin.losses[margin.losses$Season == 2016,], aes(x = reorder(Team, Margin), y = Margin)) + 
+  geom_bar(stat="identity")
 
 ##Power Rankings for 2016 Season
 ranks <- as.data.frame(read.csv("boranks/data/pwrranking.csv", header = TRUE))
