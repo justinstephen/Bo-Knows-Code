@@ -13,7 +13,7 @@ current.season <- scores[scores$Season == 2016,] %>%
             Wins = sum(Win))
 
 #########################################
-######## Tiered Clusting#################
+######## Tiered Clustering###############
 #########################################
 
 ##Scale Wins and Points on a 0 to 1 scale
