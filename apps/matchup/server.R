@@ -1,27 +1,31 @@
+##Load Libraries 
 library(shiny)
 library(dplyr)
 library(reshape)
 library(ggplot2)
+
 ## Load and clean Data
 scores <- as.data.frame(read.csv("data/allscores.csv", header = TRUE))
 
 scores <- scores[scores$Season == 2016,]
 
 teams <- as.character(unique(scores$Team))
+week <- min(scores[is.na(scores$Score), "Week"])
 
+sim.week <- scores[scores$Week == week,]
+
+## Aggregate Stats
 team.stats <- scores[complete.cases(scores),] %>%
   group_by(Team) %>%
   summarize(avg = mean(Score),
             stdev = sd(Score))
 
-week <- min(scores[is.na(scores$Score), "Week"])
-sim.week <- scores[scores$Week == week,]
 
 #############################
 #### New Sim ################
 #############################
 
-games = 1000000
+games <- 500000
 scores.list <- list()
 
 for(team in teams) {
@@ -51,24 +55,26 @@ sim.scores <- data.frame(melt(scores.list))
 shinyServer(
   function(input, output) {
     
+    output$var = renderUI(selectInput("matchup","Select a matchup", unique(matchups$matchup)))
+    
     output$teamA <- renderPrint({
-      as.character(matchups$teamA[matchups$matchup == input$var])
+      as.character(matchups$teamA[matchups$matchup == input$matchup])
     })
     
     output$teamAper <- renderPrint({
-      paste(round(matchups$teamAwin[matchups$matchup == input$var] * 100, 2), "%", sep = "")
+      paste(round(matchups$teamAwin[matchups$matchup == input$matchup] * 100, 2), "%", sep = "")
     })
     
     output$teamB <- renderPrint({
-      as.character(matchups$teamB[matchups$matchup == input$var])
+      as.character(matchups$teamB[matchups$matchup == input$matchup])
     })
     
     output$teamBper <- renderPrint({
-      paste(round(matchups$teamBwin[matchups$matchup == input$var] * 100, 2), "%", sep = "")
+      paste(round(matchups$teamBwin[matchups$matchup == input$matchup] * 100, 2), "%", sep = "")
     })
     
     output$plot <- renderPlot({
-      selected.matchup <- input$var
+      selected.matchup <- input$matchup
       teamA <- matchups$teamA[matchups$matchup == selected.matchup]
       teamB <- matchups$teamB[matchups$matchup == selected.matchup]
       

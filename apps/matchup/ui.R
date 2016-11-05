@@ -3,13 +3,12 @@ library(shiny)
 shinyUI(fluidPage(
 
   # Application title
-  titlePanel(paste("Week", week)),
+  titlePanel(paste("Week")),
 
   # Sidebar
   fluidRow(
     column(3, 
-        selectInput("var", label = "Pick a Matchup",
-                    choices = matchups$matchup)),
+           uiOutput("var")),
     column(9,
         fluidRow(
           column(6,
