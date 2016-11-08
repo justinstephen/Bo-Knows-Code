@@ -48,7 +48,9 @@ matchups <- data.frame("matchup" = paste(combined$Team, " vs ", combined$Opponen
                        ,"teamA" = combined$Team
                        ,"teamAwin" = combined$Wins
                        ,"teamB" = combined$Opponent
-                       ,"teamBwin" = 1 - combined$Wins)[1:6,]
+                       ,"teamBwin" = 1 - combined$Wins)
+
+matchups <- matchups[matchups$teamA %in% as.list(unique(as.data.frame(t(apply(matchups[c(2,4)], 1, sort))))[1])[[1]],]
 
 sim.scores <- data.frame(melt(scores.list))
 
