@@ -21,11 +21,13 @@ team.stats <- scores[complete.cases(scores),] %>%
             stdev = sd(Score))
 
 
+dens.df <- data.frame(x = seq(0, 200, by = 0.1))
+
 #############################
 #### New Sim ################
 #############################
 
-games <- 500000
+games = 1000000
 scores.list <- list()
 
 for(team in teams) {
@@ -81,8 +83,19 @@ shinyServer(
       teamB <- matchups$teamB[matchups$matchup == selected.matchup]
       
       ggplot(sim.scores[sim.scores$L1 == teamA | sim.scores$L1 == teamB, ]
-                            ,aes(value, fill = L1, color = L1)) + 
-                      geom_density(alpha = 0.1) +
-                      xlim(0, 200)
+             ,aes(value, fill = L1, color = L1)) + 
+        geom_density(alpha = 0.1) +
+        xlim(0, 200)
+    })     
+    output$plot2 <- renderPlot({
+      selected.matchup <- input$matchup
+      teamA <- matchups$teamA[matchups$matchup == selected.matchup]
+      teamB <- matchups$teamB[matchups$matchup == selected.matchup]
+      
+      ggplot(dens.df, aes(x)) + 
+        stat_function(fun = dnorm, colour = "red", args = list(mean = team.stats$avg[team.stats$Team == teamA],
+                                                               sd = team.stats$stdev[team.stats$Team == teamA])) +
+        stat_function(fun = dnorm, colour = "blue", args = list(mean = team.stats$avg[team.stats$Team == teamB],
+                                                                sd = team.stats$stdev[team.stats$Team == teamB]))
     })
   })
