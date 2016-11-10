@@ -4,6 +4,9 @@ library(dplyr)
 library(reshape)
 library(ggplot2)
 
+#Set colors to be used:
+colors <- c("#ef8a62", "#67a9cf")
+
 ## Load and clean Data
 scores <- as.data.frame(read.csv("data/allscores.csv", header = TRUE))
 
@@ -59,43 +62,59 @@ sim.scores <- data.frame(melt(scores.list))
 shinyServer(
   function(input, output) {
     
+    output$week <- renderText({as.character(week)})
+    
     output$var = renderUI(selectInput("matchup","Select a matchup", unique(matchups$matchup)))
     
-    output$teamA <- renderPrint({
+    output$teamA <- renderText({
       as.character(matchups$teamA[matchups$matchup == input$matchup])
     })
     
-    output$teamAper <- renderPrint({
+    output$teamAper <- renderText({
       paste(round(matchups$teamAwin[matchups$matchup == input$matchup] * 100, 2), "%", sep = "")
     })
     
-    output$teamB <- renderPrint({
+    output$teamB <- renderText({
       as.character(matchups$teamB[matchups$matchup == input$matchup])
     })
     
-    output$teamBper <- renderPrint({
+    output$teamBper <- renderText({
       paste(round(matchups$teamBwin[matchups$matchup == input$matchup] * 100, 2), "%", sep = "")
     })
     
-    output$plot <- renderPlot({
-      selected.matchup <- input$matchup
-      teamA <- matchups$teamA[matchups$matchup == selected.matchup]
-      teamB <- matchups$teamB[matchups$matchup == selected.matchup]
-      
-      ggplot(sim.scores[sim.scores$L1 == teamA | sim.scores$L1 == teamB, ]
-             ,aes(value, fill = L1, color = L1)) + 
-        geom_density(alpha = 0.1) +
-        xlim(0, 200)
-    })     
-    output$plot2 <- renderPlot({
+    output$d.plot <- renderPlot({
       selected.matchup <- input$matchup
       teamA <- matchups$teamA[matchups$matchup == selected.matchup]
       teamB <- matchups$teamB[matchups$matchup == selected.matchup]
       
       ggplot(dens.df, aes(x)) + 
-        stat_function(fun = dnorm, colour = "red", args = list(mean = team.stats$avg[team.stats$Team == teamA],
-                                                               sd = team.stats$stdev[team.stats$Team == teamA])) +
-        stat_function(fun = dnorm, colour = "blue", args = list(mean = team.stats$avg[team.stats$Team == teamB],
-                                                                sd = team.stats$stdev[team.stats$Team == teamB]))
+        geom_area(stat = "function",
+                  fun = dnorm, 
+                  fill = colors[1],
+                  alpha = .5,
+                  args = list(mean = team.stats$avg[team.stats$Team == teamA],
+                              sd = team.stats$stdev[team.stats$Team == teamA])) +
+        geom_area(stat = "function",
+                  fun = dnorm,
+                  fill = colors[2],
+                  alpha = .5,
+                  args = list(mean = team.stats$avg[team.stats$Team == teamB],
+                              sd = team.stats$stdev[team.stats$Team == teamB])) +
+        labs(x = "Score", y = "Density")
+    })
+    
+    output$l.plot <- renderPlot({
+      selected.matchup <- input$matchup
+      teams <- c(as.character(matchups$teamA[matchups$matchup == selected.matchup]), 
+                 as.character(matchups$teamB[matchups$matchup == selected.matchup]))
+      
+      matchup.scores <- scores[scores$Team %in% teams, c("Team", "Week", "Score")]
+      
+      ggplot(matchup.scores, aes(x = Week, y = Score, color = Team)) + 
+        geom_line(size = 2) + 
+        ylim(50, 200) + 
+        scale_x_continuous(breaks = 1:week-1, limits = c(1, week-1)) +
+        scale_color_manual(values = colors) +
+        theme(legend.position="none")
     })
   })
