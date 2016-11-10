@@ -110,9 +110,12 @@ shinyServer(
       
       matchup.scores <- scores[scores$Team %in% teams, c("Team", "Week", "Score")]
       
+      max <- max(matchup.scores$Score, na.rm = TRUE) + 20
+      min <- min(matchup.scores$Score, na.rm = TRUE) - 20
+      
       ggplot(matchup.scores, aes(x = Week, y = Score, color = Team)) + 
-        geom_line(size = 2) + 
-        ylim(50, 200) + 
+        geom_line(size = 2, alpha = .5) + 
+        ylim(min, max) + 
         scale_x_continuous(breaks = 1:week-1, limits = c(1, week-1)) +
         scale_color_manual(values = colors) +
         theme(legend.position="none")
