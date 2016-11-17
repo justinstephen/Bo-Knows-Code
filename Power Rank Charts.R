@@ -51,4 +51,5 @@ bot4.plot <- ggplot(ranks[ranks$Team %in% bot4,], aes(y = Rank, x = Week, color 
   scale_colour_tableau("colorblind10") +
   theme(legend.position="none")
 
+## Save size 600x900
 grid.arrange(top4.plot, mid4.plot, bot4.plot, nrow=3)
