@@ -3,10 +3,6 @@ library(ggthemes)
 library(gridExtra)
 library(directlabels)
 
-#plot_ly(ranks, x = ~Week, y = ~Rank, color = ~Team) %>%
-#  add_lines() %>%
-#  layout(yaxis = list(autorange = "reversed"))
-
 ranks <- as.data.frame(read.csv("pwrranking.csv", header = TRUE))
 
 top4 <- ranks$Team[ranks$Rank < 5 & ranks$Week == max(ranks$Week)]
