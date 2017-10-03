@@ -3,14 +3,14 @@ library(ggplot2)
 library(dplyr)
 
 ## Load and clean Data
-scores <- as.data.frame(read.csv("allscores.csv", header = TRUE))
+scores <- as.data.frame(read.csv("~/data/boknows/full_schedule.csv", header = TRUE))
 scores <- scores[complete.cases(scores),]
 
 #Aggregate Data
-current.season <- scores[scores$Season == 2016,] %>%
-  group_by(Team) %>%
-  summarize(Average = mean(Score),
-            Wins = sum(Win))
+current.season <- scores[scores$SEASON == 2017,] %>%
+  group_by(TEAM) %>%
+  summarize(Average = mean(SCORE),
+            Wins = sum(WIN))
 
 #########################################
 ######## Tiered Clustering###############
@@ -27,15 +27,15 @@ current.season$tier <- scoreCluster$cluster
 
 ##Scatter Plot
 ##Save Size 600x350
-ggplot(current.season, aes(x = Wins, y = Average, label = Team)) +
+ggplot(current.season, aes(x = Wins, y = Average, label = TEAM)) +
   geom_label(aes(fill = as.factor(tier)), colour = "white", fontface = "bold") +
   scale_fill_brewer(palette = "Set1") +
   scale_x_continuous(breaks = 1:max(current.season$Wins)) +
   theme(legend.position="none", panel.grid.minor.x = element_blank()) +
-  coord_cartesian(xlim=c(1.75, max(current.season$Wins)+.25))
+  coord_cartesian(xlim=c(.75, max(current.season$Wins)+.25))
 
 ##Bar Chart
-ggplot(current.season, aes(reorder(Team, -Average), y = Average)) +
+ggplot(current.season, aes(reorder(TEAM, -Average), y = Average)) +
   geom_bar(stat="identity", aes(fill = as.factor(tier))) +
   geom_text(aes(label = Average), hjust = -.1, vjust = .4, angle = 270) +
   scale_fill_brewer(palette = "Paired") +
