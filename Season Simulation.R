@@ -2,7 +2,7 @@ library("XML")
 library("plyr")
 
 #Parse teams and divisions:
-division.page <- htmlParse("http://games.espn.com/ffl/standings?leagueId=45342&seasonId=2016")
+division.page <- htmlParse("http://games.espn.com/ffl/standings?leagueId=45342&seasonId=2017")
 division.page <- readHTMLTable(division.page,stringAsFactors = FALSE)
 
 div.table <- as.data.frame(division.page[2]) 
@@ -44,10 +44,8 @@ week12 <- bo.df[ 101:106,c(2, 5, 7)]
 week12$WEEK <- "week12"
 week13 <- bo.df[ 110:115,c(2, 5, 7)]
 week13$WEEK <- "week13"
-week14 <- bo.df[ 119:124,c(2, 5, 7)]
-week14$WEEK <- "week14"
 weeks <- list(week1=week1, week2=week2, week3=week3, week4=week4, week5=week5, week6=week6, week7=week7, week8=week8, week9=week9, 
-              week10=week10, week11=week11, week12=week12, week13=week13, week14=week14)
+              week10=week10, week11=week11, week12=week12, week13=week13)
 
 #This is the section that will loop over and create a data frame for each week, then clean each up and merge them into one list
 week.summary <- lapply(weeks, function(df)
@@ -168,15 +166,17 @@ while (games < sim.games) {
   
   #This will determine the two division winners
   div1.winner <- as.character(standings[standings$division ==1, "team"][1])
+  div1.ru <- as.character(standings[standings$division ==1, "team"][2])
   div2.winner <- as.character(standings[standings$division ==2, "team"][1])
+  div2.ru <- as.character(standings[standings$division ==2, "team"][2])
   
   #This will determine the wildcard teams
-  wildcard <- subset(standings, team != div1.winner & team != div2.winner)
+  wildcard <- subset(standings, team != div1.winner & team != div2.winner & team != div1.ru & team != div2.ru)
   wc1 <- as.character(wildcard[1,"team"])
   wc2 <- as.character(wildcard[2,"team"])
   
   #List of playoff teams
-  playoff.teams <- c(div1.winner, div2.winner, wc1, wc2)
+  playoff.teams <- c(div1.winner, div2.winner, div1.ru, div2.ru, wc1, wc2)
   playoff.teams.total <- append(playoff.teams.total, playoff.teams)
 }
 ###################################################
@@ -187,4 +187,5 @@ while (games < sim.games) {
 po.freq <- as.data.frame(table(playoff.teams.total))
 colnames(po.freq) <- c("team", "count")
 po.freq <- po.freq[with(po.freq, order(po.freq$count, decreasing = TRUE)),]
+po.freq$count <- po.freq$count / games * 100
 po.freq
