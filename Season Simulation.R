@@ -1,11 +1,12 @@
 library("XML")
-library("plyr")
+library("dplyr")
+library("svMisc")
 
 #Parse teams and divisions:
 division.page <- htmlParse("http://games.espn.com/ffl/standings?leagueId=45342&seasonId=2017")
 division.page <- readHTMLTable(division.page,stringAsFactors = FALSE)
 
-div.table <- as.data.frame(division.page[2]) 
+div.table <- as.data.frame(division.page[2])
 
 divisions <- data.frame(division = 1, team = div.table[3:8,1])
 divisions <- rbind(divisions, data.frame(division = 2, team = div.table[11:16,1]))
@@ -15,34 +16,34 @@ divisions$team <- as.character(divisions$team)
 boknows <- htmlParse("http://games.espn.com/ffl/schedule?leagueId=45342")
 boknows.table <- readHTMLTable(boknows,stringAsFactors = FALSE)
 fullschedule <- boknows.table[2]
-bo.df <- ldply(fullschedule, data.frame)
-colnames(bo.df) <- c("NULL","AWAY_TEAM", "OWNER", "AT", "HOME_TEAM", "OWNER", "RESULT")
+bo.df <- as.data.frame(fullschedule)
+colnames(bo.df) <- c("AWAY_TEAM", "OWNER", "AT", "HOME_TEAM", "OWNER", "RESULT")
 
-week1 <- bo.df[ 2:7,c(2, 5, 7)]
+week1 <- bo.df[ 2:7,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week1$WEEK <- "week1"
-week2 <- bo.df[ 11:16,c(2, 5, 7)]
+week2 <- bo.df[ 11:16,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week2$WEEK <- "week2"
-week3 <- bo.df[ 20:25,c(2, 5, 7)]
+week3 <- bo.df[ 20:25,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week3$WEEK <- "week3"
-week4 <- bo.df[ 29:34,c(2, 5, 7)]
+week4 <- bo.df[ 29:34,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week4$WEEK <- "week4"
-week5 <- bo.df[ 38:43,c(2, 5, 7)]
+week5 <- bo.df[ 38:43,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week5$WEEK <- "week5"
-week6 <- bo.df[ 47:52,c(2, 5, 7)]
+week6 <- bo.df[ 47:52,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week6$WEEK <- "week6"
-week7 <- bo.df[ 56:61,c(2, 5, 7)]
+week7 <- bo.df[ 56:61,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week7$WEEK <- "week7"
-week8 <- bo.df[ 65:70,c(2, 5, 7)]
+week8 <- bo.df[ 65:70,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week8$WEEK <- "week8"
-week9 <- bo.df[ 74:79,c(2, 5, 7)]
+week9 <- bo.df[ 74:79,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week9$WEEK <- "week9"
-week10 <- bo.df[ 83:88,c(2, 5, 7)]
+week10 <- bo.df[ 83:88,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week10$WEEK <- "week10"
-week11 <- bo.df[ 92:97,c(2, 5, 7)]
+week11 <- bo.df[ 92:97,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week11$WEEK <- "week11"
-week12 <- bo.df[ 101:106,c(2, 5, 7)]
+week12 <- bo.df[ 101:106,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week12$WEEK <- "week12"
-week13 <- bo.df[ 110:115,c(2, 5, 7)]
+week13 <- bo.df[ 110:115,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
 week13$WEEK <- "week13"
 weeks <- list(week1=week1, week2=week2, week3=week3, week4=week4, week5=week5, week6=week6, week7=week7, week8=week8, week9=week9, 
               week10=week10, week11=week11, week12=week12, week13=week13)
@@ -61,14 +62,14 @@ week.summary <- lapply(weeks, function(df)
 })
 
 #This loop will replace the generic "RESULT" from earlier with the column of the week name
-for (week in 1:14) {
+for (week in 1:13) {
   names(week.summary[[week]]) <- c("TEAM", paste("WEEK", week, sep=""))
 }
 
 #This loop will take the list of data frames and turn it into one data frame with all the point totals for all teams
 all.scores <- week.summary[[1]]
-for (week in 2:14) {
-  all.scores <- join(all.scores, week.summary[[week]], by = "TEAM")
+for (week in 2:13) {
+  all.scores <- left_join(all.scores, week.summary[[week]], by = "TEAM")
 }
 
 #Strips off the named column and adds it as a data frame row name as well as converts all data to numeric
@@ -107,23 +108,20 @@ schedule <- lapply(weeks, function(df)
 #Groups all the dataframes into one
 schedule = Reduce(function(...) merge(..., all=T), schedule)
 
-#This initializes the list of teams that will make playoffs and will be OUTSIDE the loop
-playoff.teams.total <- character()
-
+if (exists("full.standings")) {
+  rm("full.standings")
+}
 
 ###################################################
 ###                 BEGIN LOOP                 ####
 ###################################################
 
-progress.bar <- create_progress_bar("text")
-sim.games <- 100000
-progress.bar$init(sim.games)
-
+sim.games <- 10000
 games = 0
 
 while (games < sim.games) {
   games = games + 1
-  progress.bar$step()
+  progress(games, max.value = sim.games, progress.bar = TRUE)
   scoreboard <- schedule
   
   #This simulates a score to replace all the NA's
@@ -152,40 +150,75 @@ while (games < sim.games) {
   standings <- merge(x = standings, y = wins.total, by = "team", all.x=TRUE)
   
   #Populate a table of total points of all teams and then append it to the standings table
-  points <- c(0,0,0,0,0,0,0,0,0,0,0,0)
-  total.points <- data.frame(team,points)
-  team <- all.scores$TEAM
-  for (i in team) {
-    total.points[team == i,]$points <- sum(scoreboard[scoreboard$AWAY_TEAM == i,]$AWAY_SCORE) + sum(scoreboard[scoreboard$HOME_TEAM == i,]$AWAY_SCORE)
-  }
+  # points <- c(0,0,0,0,0,0,0,0,0,0,0,0)
+  # team <- all.scores$TEAM
+  # total.points <- data.frame(team,points)
+  
+  #Something might be  wrong here
+  # for (i in team) {
+  #   total.points[team == i,]$points <- sum(scoreboard[scoreboard$AWAY_TEAM == i,]$AWAY_SCORE) + sum(scoreboard[scoreboard$HOME_TEAM == i,]$AWAY_SCORE)
+  # }
+  away.scores <- scoreboard[,2:3]
+  home.scores <- scoreboard[,4:5]
+  names(home.scores) <- names(away.scores)
+  
+  stacked.scoreboard <- rbind(home.scores, away.scores)
+  
+  total.points <- stacked.scoreboard %>%
+    group_by(team = AWAY_TEAM) %>%
+    summarize(points = sum(AWAY_SCORE))
+  
   standings <- merge(x = standings, y = total.points, by = "team", all.x=TRUE)
   
   #Clean up the standings tables
   standings[is.na(standings)] <- 0
   standings<- standings[with(standings, order(wins, points, decreasing=TRUE)),]
   
-  #This will determine the two division winners
-  div1.winner <- as.character(standings[standings$division ==1, "team"][1])
-  div1.ru <- as.character(standings[standings$division ==1, "team"][2])
-  div2.winner <- as.character(standings[standings$division ==2, "team"][1])
-  div2.ru <- as.character(standings[standings$division ==2, "team"][2])
+  standings$seed <- 0
   
-  #This will determine the wildcard teams
-  wildcard <- subset(standings, team != div1.winner & team != div2.winner & team != div1.ru & team != div2.ru)
-  wc1 <- as.character(wildcard[1,"team"])
-  wc2 <- as.character(wildcard[2,"team"])
+  ##1 Seed Division Winner 
+  standings$seed[1] <- 1
   
-  #List of playoff teams
-  playoff.teams <- c(div1.winner, div2.winner, div1.ru, div2.ru, wc1, wc2)
-  playoff.teams.total <- append(playoff.teams.total, playoff.teams)
+  ##2 Seed Division Winner
+  standings[standings$seed == 0 & standings$division != standings[standings$seed == 1, "division"], "seed"][1] <- 2
+  
+  ##3 Seed Division Runner Up
+  standings[standings$seed == 0, "seed"][1] <- 3
+  
+  ##4 Seed Division Runner Up
+  standings[standings$seed == 0 & standings$division != standings[standings$seed == 3, "division"], "seed"][1] <- 4
+  
+  ##5 Wild Card 1
+  standings[standings$seed == 0, "seed"][1] <- 5
+  
+  ##6 Wild Card 2
+  standings[standings$seed == 0, "seed"][1] <- 6
+  
+  if (exists("full.standings")) {
+    full.standings <- rbind(full.standings, standings)
+  } else {
+    full.standings <- standings[FALSE,]
+    full.standings <- rbind(full.standings, standings)
+  }
 }
+
 ###################################################
 ###                  END LOOP                  ####
 ###################################################
 
-#Puts data into a data.frame and formats
-po.freq <- as.data.frame(table(playoff.teams.total))
-colnames(po.freq) <- c("team", "count")
-po.freq <- po.freq[with(po.freq, order(po.freq$count, decreasing = TRUE)),]
-po.freq$count <- po.freq$count / games * 100
-po.freq
+po.odds <- full.standings %>%
+  group_by(team) %>%
+  summarize(avg = mean(points),
+            wins = mean(wins),
+            one_seed = sum(seed[seed == 1]),
+            two_seed = sum(seed[seed == 2]) / 2,
+            three_seed = sum(seed[seed == 3]) / 3,
+            four_seed = sum(seed[seed == 4]) / 4,
+            five_seed = sum(seed[seed == 5]) / 5,
+            six_seed = sum(seed[seed == 6]) / 6) %>%
+  mutate(total_odds = rowSums(.[4:9]))
+
+po.odds[,4:10] <- po.odds[,4:10] / games * 100
+
+po.odds <- po.odds[with(po.odds, order(total_odds, one_seed, two_seed, three_seed, 
+                                       four_seed, five_seed, six_seed, decreasing = TRUE)),]
