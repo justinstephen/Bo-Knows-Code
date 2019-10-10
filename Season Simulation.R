@@ -1,113 +1,72 @@
-library("XML")
-library("dplyr")
-library("svMisc")
-
-#Parse teams and divisions:
-division.page <- htmlParse("http://games.espn.com/ffl/standings?leagueId=45342&seasonId=2017")
-division.page <- readHTMLTable(division.page,stringAsFactors = FALSE)
-
-div.table <- as.data.frame(division.page[2])
-
-divisions <- data.frame(division = 1, team = div.table[3:8,1])
-divisions <- rbind(divisions, data.frame(division = 2, team = div.table[11:16,1]))
-divisions$team <- as.character(divisions$team)
-
-#Parse schedule and scores:
-boknows <- htmlParse("http://games.espn.com/ffl/schedule?leagueId=45342")
-boknows.table <- readHTMLTable(boknows,stringAsFactors = FALSE)
-fullschedule <- boknows.table[2]
-bo.df <- as.data.frame(fullschedule)
-colnames(bo.df) <- c("AWAY_TEAM", "OWNER", "AT", "HOME_TEAM", "OWNER", "RESULT")
-
-week1 <- bo.df[ 2:7,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week1$WEEK <- "week1"
-week2 <- bo.df[ 11:16,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week2$WEEK <- "week2"
-week3 <- bo.df[ 20:25,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week3$WEEK <- "week3"
-week4 <- bo.df[ 29:34,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week4$WEEK <- "week4"
-week5 <- bo.df[ 38:43,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week5$WEEK <- "week5"
-week6 <- bo.df[ 47:52,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week6$WEEK <- "week6"
-week7 <- bo.df[ 56:61,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week7$WEEK <- "week7"
-week8 <- bo.df[ 65:70,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week8$WEEK <- "week8"
-week9 <- bo.df[ 74:79,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week9$WEEK <- "week9"
-week10 <- bo.df[ 83:88,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week10$WEEK <- "week10"
-week11 <- bo.df[ 92:97,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week11$WEEK <- "week11"
-week12 <- bo.df[ 101:106,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week12$WEEK <- "week12"
-week13 <- bo.df[ 110:115,c("AWAY_TEAM", "HOME_TEAM", "RESULT")]
-week13$WEEK <- "week13"
-weeks <- list(week1=week1, week2=week2, week3=week3, week4=week4, week5=week5, week6=week6, week7=week7, week8=week8, week9=week9, 
-              week10=week10, week11=week11, week12=week12, week13=week13)
-
-#This is the section that will loop over and create a data frame for each week, then clean each up and merge them into one list
-week.summary <- lapply(weeks, function(df)
-{
-  df$AWAY_SCORE <- gsub("-.*", "", df$RESULT)
-  df$HOME_SCORE <- gsub(".*-", "", df$RESULT)
-  df <- df[,c("AWAY_TEAM","AWAY_SCORE","HOME_TEAM","HOME_SCORE")]
-  df$AWAY_TEAM <- gsub("\\s\\(.*", "", df$AWAY_TEAM)
-  df$HOME_TEAM <- gsub("\\s\\(.*", "", df$HOME_TEAM)
-  df.scores <- df
-  colnames(df.scores) <- c("TEAM","RESULT","TEAM","RESULT")
-  df.scores <- rbind(df.scores[1:2],df.scores[3:4])
-})
-
-#This loop will replace the generic "RESULT" from earlier with the column of the week name
-for (week in 1:13) {
-  names(week.summary[[week]]) <- c("TEAM", paste("WEEK", week, sep=""))
-}
-
-#This loop will take the list of data frames and turn it into one data frame with all the point totals for all teams
-all.scores <- week.summary[[1]]
-for (week in 2:13) {
-  all.scores <- left_join(all.scores, week.summary[[week]], by = "TEAM")
-}
-
-#Strips off the named column and adds it as a data frame row name as well as converts all data to numeric
-new.all.scores <- all.scores[,-1]
-new.all.scores <- sapply(new.all.scores, as.numeric)
-row.names(new.all.scores) <- all.scores$TEAM
-
-#Creates the stats data frame to be used to simulate games
-stats <- data.frame(Mean = rowMeans(new.all.scores, na.rm = TRUE), SD = apply(new.all.scores, 1, sd, na.rm=TRUE))
-stats <- data.frame(team = row.names(stats), mean = stats$Mean, sd = stats$SD)
+library(tidyverse)
+library(httr)
+library(jsonlite)
 
 #This is the function that will simulate a score when given a team name based on the "stats" table
+# sim.score <- function(x) {
+#   x.mean <- as.numeric(stats[stats$TEAM == x, "mean"])
+#   x.sd <- as.numeric(stats[stats$TEAM == x, "sd"]) + 25
+#   score <- rnorm(1, mean = x.mean, sd = x.sd) #+ rnorm(1, mean = 0, sd = 25)
+# }
+
 sim.score <- function(x) {
-  x.mean <- stats[stats$team == x, "mean"]
-  x.sd <- stats[stats$team == x, "sd"]
-  score <- rnorm(1, mean = x.mean, sd = x.sd)
+  #Team mean and sd
+  x.mean <- mean(unlist(scores %>% filter(TEAM == x, !is.na(SCORE)) %>% select(SCORE)))
+  x.sd <- sd(unlist(scores %>% filter(TEAM == x, !is.na(SCORE)) %>% select(SCORE)))
+  
+  #League mean and sd
+  league.mean <- mean(unlist(scores %>% filter(!is.na(SCORE)) %>% select(SCORE)))
+  #league.sd <- sd(unlist(scores %>% filter(!is.na(SCORE)) %>% select(SCORE))) 
+  
+  new.mean <- x.mean * .75 + league.mean * .25
+  
+  #Generate random score 
+  score <- rnorm(1, new.mean, x.sd)
 }
 
-#Loops over the list of week dataframes to clean off unnecessary characters and format
-schedule <- lapply(weeks, function(df)
-{
-  #df$WEEK <- as.character(deparse(substitute(df)))
-  #df$WEEK <- paste("week", gsub("L\\]\\]", "",gsub("X\\[\\[","",df$WEEK)), sep = "")
-  df$AWAY_SCORE <- gsub("-.*", "", df$RESULT)
-  df$HOME_SCORE <- gsub(".*-", "", df$RESULT)
-  df$AWAY_TEAM <- gsub("\\s\\(.*", "", df$AWAY_TEAM)
-  df$HOME_TEAM <- gsub("\\s\\(.*", "", df$HOME_TEAM)
-  df <- df[,c("WEEK","AWAY_TEAM","AWAY_SCORE","HOME_TEAM","HOME_SCORE")]
-  df$AWAY_SCORE <- ifelse(df$AWAY_SCORE == "Preview", df$AWAY_SCORE <- NA, 
-                          ifelse(df$AWAY_SCORE == "Box", df$AWAY_SCORE <- NA, as.numeric(df$AWAY_SCORE)))
-  df$HOME_SCORE<- ifelse(df$HOME_SCORE == "Preview", df$HOME_SCORE <- NA, 
-                         ifelse(df$HOME_SCORE == "Box", df$HOME_SCORE <- NA, as.numeric(df$HOME_SCORE)))
-  df <- as.data.frame(df)
-})
+################################
+#Go get all the Division Data
+################################
+path <- "https://fantasy.espn.com/apis/v3/games/ffl/seasons/2019/segments/0/leagues/45342"
 
-#Groups all the dataframes into one
-schedule = Reduce(function(...) merge(..., all=T), schedule)
+request <- GET(url = path,
+               query = list(
+                 view = "standings"
+               ))
 
+request$status_code
+
+response <- content(request, as = "text", encoding = "UTF-8")
+
+page <- fromJSON(response, flatten = TRUE)
+
+divisions <- bind_cols(TeamCode = page$teams$abbrev,
+                       TeamName = paste(page$teams$location, page$teams$nickname),
+                       Division = page$teams$divisionId,
+                       Wins = page$teams$record.overall.wins,
+                       PointsFor = page$teams$record.overall.pointsFor)
+
+divisions <- divisions %>% 
+  arrange(Division, desc(Wins), desc(PointsFor)) %>%
+  mutate(DivRank = c(1:6, 1:6))
+
+################################
+#Get scores and create agg tables
+################################
+
+scores <- as.data.frame(read.csv("~/data/boknows/full_schedule.csv", header = TRUE, na.strings = NA))
+
+#Create agg table
+stats <- scores %>%
+  filter(!is.na(WIN)) %>%
+  group_by(TEAM) %>%
+  summarize(mean = mean(SCORE),
+            sd = sd(SCORE))
+
+################################
+#Beginning of the Simulator
+################################
+#Drop table if re-running
 if (exists("full.standings")) {
   rm("full.standings")
 }
@@ -115,64 +74,39 @@ if (exists("full.standings")) {
 ###################################################
 ###                 BEGIN LOOP                 ####
 ###################################################
-
-sim.games <- 10000
+#Variables for more/less looping
+sim.games <- 1000
 games = 0
+progress <- progress_estimated(sim.games)
 
+#Fire up the loop
 while (games < sim.games) {
   games = games + 1
-  progress(games, max.value = sim.games, progress.bar = TRUE)
-  scoreboard <- schedule
+  progress$tick()$print()
+  scoreboard <- scores
   
   #This simulates a score to replace all the NA's
   for (i in 1:nrow(scoreboard)) {
-    ifelse(is.na(scoreboard$AWAY_SCORE[i]), 
-           scoreboard$AWAY_SCORE[i] <- sim.score(scoreboard$AWAY_TEAM[i]),
-           scoreboard$AWAY_SCORE[i] <- scoreboard$AWAY_SCORE[i])
+    ifelse(is.na(scoreboard$SCORE[i]), 
+           scoreboard$SCORE[i] <- sim.score(scoreboard$TEAM[i]),
+           scoreboard$SCORE[i] <- scoreboard$SCORE[i])
   }
-  for (i in 1:nrow(scoreboard)) {
-    ifelse(is.na(scoreboard$HOME_SCORE[i]), 
-           scoreboard$HOME_SCORE[i] <- sim.score(scoreboard$HOME_TEAM[i]),
-           scoreboard$HOME_SCORE[i] <- scoreboard$HOME_SCORE[i])
-  }
+  
+  scoreboard$OPPO_SCORE <- scoreboard %>% inner_join(select(scoreboard, WEEK, OPPONENT, SCORE), by = c("WEEK" = "WEEK", "TEAM" = "OPPONENT")) %>% select(SCORE.y) 
   
   #This creates a new column with TRUE and FALSE for winners
-  scoreboard$WINNERS <- scoreboard$AWAY_SCORE > scoreboard$HOME_SCORE
+  scoreboard$WIN <- ifelse(scoreboard$SCORE > scoreboard$OPPO_SCORE, 1, 0)
   
-  #Changes the TRUE / FALSE values to the name of the team that won
-  scoreboard[scoreboard$WINNERS == FALSE,]$WINNERS <- as.character(scoreboard[scoreboard$WINNERS == FALSE,]$HOME_TEAM)
-  scoreboard[scoreboard$WINNERS == TRUE,]$WINNERS <- as.character(scoreboard[scoreboard$WINNERS == TRUE,]$AWAY_TEAM)
-  wins.total <- as.data.frame(table(scoreboard$WINNERS))
-  colnames(wins.total) <- c("team", "wins")
+  #Count Wins/Losses and total points
+  wins.total <- scoreboard %>%
+    group_by(team = TEAM) %>%
+    summarize(wins = sum(WIN),
+              points = sum(SCORE))
   
   #Build the standings DF.
   standings <- divisions
-  standings <- merge(x = standings, y = wins.total, by = "team", all.x=TRUE)
-  
-  #Populate a table of total points of all teams and then append it to the standings table
-  # points <- c(0,0,0,0,0,0,0,0,0,0,0,0)
-  # team <- all.scores$TEAM
-  # total.points <- data.frame(team,points)
-  
-  #Something might be  wrong here
-  # for (i in team) {
-  #   total.points[team == i,]$points <- sum(scoreboard[scoreboard$AWAY_TEAM == i,]$AWAY_SCORE) + sum(scoreboard[scoreboard$HOME_TEAM == i,]$AWAY_SCORE)
-  # }
-  away.scores <- scoreboard[,2:3]
-  home.scores <- scoreboard[,4:5]
-  names(home.scores) <- names(away.scores)
-  
-  stacked.scoreboard <- rbind(home.scores, away.scores)
-  
-  total.points <- stacked.scoreboard %>%
-    group_by(team = AWAY_TEAM) %>%
-    summarize(points = sum(AWAY_SCORE))
-  
-  standings <- merge(x = standings, y = total.points, by = "team", all.x=TRUE)
-  
-  #Clean up the standings tables
-  standings[is.na(standings)] <- 0
-  standings<- standings[with(standings, order(wins, points, decreasing=TRUE)),]
+  standings <- merge(x = standings, y = wins.total, by.x = "TeamCode", by.y = "team", all.x=TRUE)
+  standings <- standings[with(standings, order(wins, points, decreasing=TRUE)),]
   
   standings$seed <- 0
   
@@ -180,13 +114,13 @@ while (games < sim.games) {
   standings$seed[1] <- 1
   
   ##2 Seed Division Winner
-  standings[standings$seed == 0 & standings$division != standings[standings$seed == 1, "division"], "seed"][1] <- 2
+  standings[standings$seed == 0 & standings$Division != standings[standings$seed == 1, "Division"], "seed"][1] <- 2
   
   ##3 Seed Division Runner Up
   standings[standings$seed == 0, "seed"][1] <- 3
   
   ##4 Seed Division Runner Up
-  standings[standings$seed == 0 & standings$division != standings[standings$seed == 3, "division"], "seed"][1] <- 4
+  standings[standings$seed == 0 & standings$Division != standings[standings$seed == 3, "Division"], "seed"][1] <- 4
   
   ##5 Wild Card 1
   standings[standings$seed == 0, "seed"][1] <- 5
@@ -207,7 +141,7 @@ while (games < sim.games) {
 ###################################################
 
 po.odds <- full.standings %>%
-  group_by(team) %>%
+  group_by(TeamCode) %>%
   summarize(avg = mean(points),
             wins = mean(wins),
             one_seed = sum(seed[seed == 1]),
@@ -222,3 +156,8 @@ po.odds[,4:10] <- po.odds[,4:10] / games * 100
 
 po.odds <- po.odds[with(po.odds, order(total_odds, one_seed, two_seed, three_seed, 
                                        four_seed, five_seed, six_seed, decreasing = TRUE)),]
+
+#Optional: Write Playoffs CSV
+#po.odds.file <- po.odds[,c("team", "total_odds")]
+
+#write.csv(po.odds.file, file = "~/data/boknows/playoff.csv", row.names=FALSE)
